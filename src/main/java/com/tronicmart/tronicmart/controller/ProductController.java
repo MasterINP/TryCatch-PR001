@@ -1,10 +1,14 @@
 package com.tronicmart.tronicmart.controller;
 
-import com.tronicmart.tronicmart.model.Product;
-import com.tronicmart.tronicmart.model.ProductSearchCriteria;
-import com.tronicmart.tronicmart.model.ProductView;
+
+import com.tronicmart.tronicmart.payload.ApiResponse;
+import com.tronicmart.tronicmart.payload.ProductDto;
 import com.tronicmart.tronicmart.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,60 +16,66 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/products")
+@CrossOrigin
+@RequestMapping("/product")
 public class ProductController {
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+
     @Autowired
     private ProductService productService;
 
-    @GetMapping
-    public List<Product> getAllProducts() {
-        return productService.getAllProducts();
+    //Create Product
+    @PostMapping(value = "/add")
+    public ResponseEntity<ProductDto> CreateProduct(@RequestParam MultiValueMap<String, String> formData, @RequestParam("img") MultipartFile file) throws IOException {
+        ProductDto productDto = new ProductDto();
+        productDto.setProductName(formData.getFirst("productname"));
+        productDto.setDescription(formData.getFirst("description"));
+        productDto.setWeight(Float.valueOf(formData.getFirst("weight")));
+        productDto.setPrice(Float.valueOf(formData.getFirst("price")));
+        productDto.setImg(file.getBytes());
+
+        ProductDto save = this.productService.CreateProduct(productDto);
+
+        return new ResponseEntity<ProductDto>(save, HttpStatusCode.valueOf(200));
     }
 
-    @GetMapping("/{id}")
-    public Product getProductById(@PathVariable Long id) {
-        return productService.getProductById(id);
+    //Get by Id
+    @GetMapping("/{productid}")
+    public ResponseEntity<ProductDto> GetById(@PathVariable Integer productid) {
+        ProductDto product = this.productService.ReadProduct(productid);
+
+        return new ResponseEntity<>(product, HttpStatusCode.valueOf(200));
     }
 
-    @PostMapping
-    public Product createProduct(@RequestBody Product product) {
-        return productService.createProduct(product);
+
+    //Get All Product
+    @GetMapping("/")
+    public ResponseEntity<List<ProductDto>> getAll() {
+        List<ProductDto> products = this.productService.ReadAllProduct();
+
+        return new ResponseEntity<>(products, HttpStatusCode.valueOf(200));
     }
 
-    @PutMapping("/{id}")
-    public Product updateProduct(@PathVariable Long id, @RequestBody Product product) {
-        return productService.updateProduct(id, product);
+
+    //Delete Product
+    @DeleteMapping(value = "/del/{ProductId}", produces = "application/json")
+    public ResponseEntity<ApiResponse> Delete(@PathVariable Integer ProductId) {
+        this.productService.DeleteProduct(ProductId);
+        return new ResponseEntity<ApiResponse>(new ApiResponse("Product deleted"), HttpStatusCode.valueOf(200));
     }
 
-    @DeleteMapping("/{id}")
-    public void deleteProduct(@PathVariable Long id) {
-        productService.deleteProduct(id);
-    }
 
-    @PostMapping("/search")
-    public List<Product> searchProducts(@RequestBody ProductSearchCriteria criteria) {
-        return productService.searchProducts(criteria);
-    }
+    //Update Product
+    @PutMapping("/{ProductId}")
+    public ResponseEntity<ProductDto> UpdateProduct(@RequestParam MultiValueMap<String, String> formData, @RequestParam("img") MultipartFile file, @PathVariable Integer ProductId) throws IOException {
+        ProductDto productDto = new ProductDto();
+        productDto.setProductName(formData.getFirst("productname"));
+        productDto.setDescription(formData.getFirst("description"));
+        productDto.setWeight(Float.valueOf(formData.getFirst("weight")));
+        productDto.setPrice(Float.valueOf(formData.getFirst("price")));
+        productDto.setImg(file.getBytes());
 
-    @PostMapping("/{id}/image")
-    public void uploadProductImage(@PathVariable Long id, @RequestParam("file") MultipartFile file) throws IOException {
-        byte[] imageBytes = file.getBytes();
-        productService.updateProductImage(id, imageBytes);
-    }
+        ProductDto save = this.productService.UpdateProduct(productDto, ProductId);
 
-    @GetMapping("/{id}")
-    public ProductView getProductViewById(@PathVariable Long id) {
-        return productService.getProductViewById(id);
-    }
-
-    @PostMapping("/{id}/addToCart")
-    public void addToCart(@PathVariable Long id, @RequestParam Integer quantity) {
-        productService.addToCart(id, quantity);
-    }
-
-    @PostMapping("/{id}/removeFromCart")
-    public void removeFromCart(@PathVariable Long id, @RequestParam Integer quantity) {
-        productService.removeFromCart(id, quantity);
+        return new ResponseEntity<ProductDto>(save, HttpStatusCode.valueOf(200));
     }
 }
